@@ -39,7 +39,9 @@ async function run() {
   try {
     const usersCollection = client.db("tuitionMela").collection("users");
     const tuitionsCollection = client.db("tuitionMela").collection("tuitions");
-    const applicationsCollection = client.db("tuitionMela").collection("applications");
+    const applicationsCollection = client
+      .db("tuitionMela")
+      .collection("applications");
 
     // verify student
     const verifyStudent = async (req, res, next) => {
@@ -115,7 +117,6 @@ async function run() {
     // update profile
     app.post("/users/:email", async (req, res) => {
       const email = req.params.email;
-      console.log(req.body);
       const user = req.body;
       const query = { email };
       const updatedDoc = {
@@ -123,6 +124,7 @@ async function run() {
           name: user.name,
           email: user.email,
           location: user.location,
+          phone: user.phone
         },
       };
       const result = await usersCollection.updateOne(query, updatedDoc);
@@ -132,7 +134,7 @@ async function run() {
     // get tuitions
     app.get("/tuitions", async (req, res) => {
       const query = {};
-      const tuitions = await tuitionsCollection.find(query).toArray();
+      const tuitions = await tuitionsCollection.find(query).sort({ $natural: -1 }).toArray();
       res.send(tuitions);
     });
 
@@ -148,23 +150,40 @@ async function run() {
       const application = req.body;
       console.log(application);
       const query = {
-        email: application.email,
-        tuitionId: application.tuitionId,
-      };
+        tutorEmail: application.tutorEmail,
+        tuitionId: application.tuitionId
+    }
 
-      const alreadyApplied = await applicationsCollection.find(query).toArray();
-      if (alreadyApplied.length) {
-        const message = `You have already applied!`;
-        return res.send({ acknowledged: false, message });
-      }
+    const alreadyApplied = await applicationsCollection.find(query).toArray();
+    if (alreadyApplied.length) {
+        const message = `You have already applied`
+        return res.send({ acknowledged: false, message })
+    }
       const result = await applicationsCollection.insertOne(application);
       res.send(result);
     });
 
-    app.get('/allApplications', async (req, res) => {
-        const query = {};
-        const applications = await applicationsCollection.find(query).toArray();
-        res.send(applications);
+    // get all applications 
+    app.get("/allApplications", async (req, res) => {
+      const query = {};
+      const applications = await applicationsCollection.find(query).toArray();
+      res.send(applications);
+    });
+
+    // get individual post applications 
+    app.get("/allApplications/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { tuitionId : id };
+      const applications = await applicationsCollection.find(query).toArray();
+      res.send(applications);
+    });
+
+    // get individual applicants applications 
+    app.get("/myApplications", async (req, res) => {
+      const email = req.query.email;
+      const query = { tutorEmail : email };
+      const applications = await applicationsCollection.find(query).toArray();
+      res.send(applications);
     });
 
   } finally {
