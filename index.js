@@ -132,11 +132,21 @@ async function run() {
     });
 
     // get tuitions
-    app.get("/tuitions", async (req, res) => {
-      const query = {};
-      const tuitions = await tuitionsCollection.find(query).sort({ $natural: -1 }).toArray();
-      res.send(tuitions);
-    });
+    // app.get("/tuitions", async (req, res) => {
+    //   const query = {};
+    //   const tuitions = await tuitionsCollection.find(query).sort({ $natural: -1 }).toArray();
+    //   res.send(tuitions);
+    // });
+
+    app.get('/tuitions', async(req, res) =>{
+      const page = parseInt(req.query.page);
+      const size = parseInt(req.query.size);
+      const query = {}
+      const cursor = tuitionsCollection.find(query);
+      const tuitions = await cursor.sort({ $natural: -1 }).skip(page*size).limit(size).toArray();
+      const count = await tuitionsCollection.estimatedDocumentCount();
+      res.send({count, tuitions});
+  });
 
     // add tuition to the collection
     app.post("/tuitions", verifyJwt, verifyStudent, async (req, res) => {
@@ -148,7 +158,6 @@ async function run() {
     // apply
     app.post("/applications", verifyJwt, verifyTutor, async (req, res) => {
       const application = req.body;
-      console.log(application);
       const query = {
         tutorEmail: application.tutorEmail,
         tuitionId: application.tuitionId
